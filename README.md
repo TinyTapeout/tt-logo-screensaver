@@ -1,6 +1,10 @@
 ![](../../workflows/gds/badge.svg) ![](../../workflows/docs/badge.svg) ![](../../workflows/test/badge.svg) ![](../../workflows/fpga/badge.svg)
 
-# Tiny Tapeout Verilog Project Template
+# Tiny Tapeout Logo Screen Saver (VGA)
+
+Displays a bouncing Tiny Tapeout logo on the screen, with animated color gradient.
+
+![Tiny Tapeout screensaver](screensaver.jpg)
 
 - [Read the documentation for project](docs/info.md)
 

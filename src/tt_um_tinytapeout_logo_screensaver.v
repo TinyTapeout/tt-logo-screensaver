@@ -37,8 +37,30 @@ module tt_um_tinytapeout_logo_screensaver (
   wire cfg_tile = ui_in[0];
   wire cfg_solid_color = ui_in[1];
 
-  // TinyVGA PMOD
-  assign uo_out  = {hsync, B[0], G[0], R[0], vsync, B[1], G[1], R[1]};
+  // Tiny VGA Pmod
+  assign uo_out = {hsync, B[0], G[0], R[0], vsync, B[1], G[1], R[1]};
+
+  // Gamepad Pmod
+  wire gamepad_start, gamepad_up, gamepad_down, gamepad_left, gamepad_right;
+  reg gamepad_start_prev;
+
+  /* verilator lint_off PINMISSING */
+  gamepad_pmod_single gamepad (
+      // Inputs:
+      .rst_n(rst_n),
+      .clk(clk),
+      .pmod_data(ui_in[6]),
+      .pmod_clk(ui_in[5]),
+      .pmod_latch(ui_in[4]),
+
+      // Outputs:
+      .start(gamepad_start),
+      .up(gamepad_up),
+      .down(gamepad_down),
+      .left(gamepad_left),
+      .right(gamepad_right)
+  );
+  /* verilator lint_on PINMISSING */
 
   // Unused outputs assigned to 0.
   assign uio_out = 0;
@@ -63,6 +85,7 @@ module tt_um_tinytapeout_logo_screensaver (
   reg [9:0] logo_top;
   reg dir_x;
   reg dir_y;
+  reg manual_mode;
 
   wire pixel_value;
   reg [2:0] color_index;
@@ -87,6 +110,7 @@ module tt_um_tinytapeout_logo_screensaver (
   wire [5:0] gradient_color = {1'b1, y[6:2] - x[6:2] + logo_left[6:2]};
   assign color = cfg_solid_color ? pallete_color : gradient_color;
 
+
   // RGB output logic
   always @(posedge clk) begin
     if (~rst_n) begin
@@ -105,7 +129,7 @@ module tt_um_tinytapeout_logo_screensaver (
     end
   end
 
-  // Bouncing logic
+
   always @(posedge clk) begin
     if (~rst_n) begin
       logo_left <= 200;
@@ -113,29 +137,74 @@ module tt_um_tinytapeout_logo_screensaver (
       dir_y <= 0;
       dir_x <= 1;
       color_index <= 0;
+      gamepad_start_prev <= 0;
+      manual_mode <= 0;
     end else begin
+      // Bouncing logic
       prev_y <= pix_y;
       if (pix_y == 0 && prev_y != pix_y) begin
-        logo_left <= logo_left + (dir_x ? 1 : -1);
-        logo_top  <= logo_top + (dir_y ? 1 : -1);
-        if (logo_left - 1 == 0 && !dir_x) begin
-          dir_x <= 1;
-          color_index <= color_index + 1;
+        if (manual_mode) begin
+          logo_manual_control();
+        end else begin
+          bounce_logo();
         end
-        if (logo_left + 1 == DISPLAY_WIDTH - LOGO_SIZE && dir_x) begin
-          dir_x <= 0;
-          color_index <= color_index + 1;
+        if (gamepad_start & ~gamepad_start_prev) begin
+          manual_mode <= ~manual_mode;
         end
-        if (logo_top - 1 == 0 && !dir_y) begin
-          dir_y <= 1;
-          color_index <= color_index + 1;
-        end
-        if (logo_top + 1 == DISPLAY_HEIGHT - LOGO_SIZE && dir_y) begin
-          dir_y <= 0;
-          color_index <= color_index + 1;
-        end
+        gamepad_start_prev <= gamepad_start;
       end
     end
   end
+
+
+  task logo_manual_control;
+    if (gamepad_left && logo_left > 0) begin
+      logo_left <= logo_left - 1;
+    end
+    if (gamepad_right && logo_left + 1 < DISPLAY_WIDTH - LOGO_SIZE) begin
+      logo_left <= logo_left + 1;
+    end
+    if (gamepad_up && logo_top > 0) begin
+      logo_top <= logo_top - 1;
+    end
+    if (gamepad_down && logo_top + 1 < DISPLAY_HEIGHT - LOGO_SIZE) begin
+      logo_top <= logo_top + 1;
+    end
+  endtask
+
+
+  task bounce_logo;
+    logo_left <= logo_left + (dir_x ? 1 : -1);
+    logo_top  <= logo_top + (dir_y ? 1 : -1);
+
+    if (gamepad_left) begin
+      dir_x <= 0;
+    end else if (gamepad_right) begin
+      dir_x <= 1;
+    end
+
+    if (gamepad_up) begin
+      dir_y <= 0;
+    end else if (gamepad_down) begin
+      dir_y <= 1;
+    end
+
+    if (logo_left - 1 == 0 && !dir_x) begin
+      dir_x <= 1;
+      color_index <= color_index + 1;
+    end
+    if (logo_left + 1 == DISPLAY_WIDTH - LOGO_SIZE && dir_x) begin
+      dir_x <= 0;
+      color_index <= color_index + 1;
+    end
+    if (logo_top - 1 == 0 && !dir_y) begin
+      dir_y <= 1;
+      color_index <= color_index + 1;
+    end
+    if (logo_top + 1 == DISPLAY_HEIGHT - LOGO_SIZE && dir_y) begin
+      dir_y <= 0;
+      color_index <= color_index + 1;
+    end
+  endtask
 
 endmodule

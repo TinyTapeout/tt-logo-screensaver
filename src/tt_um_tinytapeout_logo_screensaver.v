@@ -137,6 +137,7 @@ module tt_um_tinytapeout_logo_screensaver (
       dir_y <= 0;
       dir_x <= 1;
       color_index <= 0;
+      prev_y <= 0;
       gamepad_start_prev <= 0;
       manual_mode <= 0;
     end else begin

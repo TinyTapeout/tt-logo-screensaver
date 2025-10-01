@@ -69,8 +69,6 @@ module tt_um_tinytapeout_logo_screensaver (
   // Suppress unused signals warning
   wire _unused_ok = &{ena, ui_in[7:1], uio_in};
 
-  reg [9:0] prev_y;
-
   vga_sync_generator vga_sync_gen (
       .clk(clk),
       .reset(~rst_n),
@@ -82,7 +80,7 @@ module tt_um_tinytapeout_logo_screensaver (
   );
 
   reg [9:0] logo_left;
-  reg [9:0] logo_top;
+  reg [8:0] logo_top;
   reg dir_x;
   reg dir_y;
   reg manual_mode;
@@ -137,13 +135,11 @@ module tt_um_tinytapeout_logo_screensaver (
       dir_y <= 0;
       dir_x <= 1;
       color_index <= 0;
-      prev_y <= 0;
       gamepad_start_prev <= 0;
       manual_mode <= 0;
     end else begin
-      // Bouncing logic
-      prev_y <= pix_y;
-      if (pix_y == 0 && prev_y != pix_y) begin
+      // Bouncing logic, run once per frame
+      if (pix_y == 0 && pix_x == 0) begin
         if (manual_mode) begin
           logo_manual_control();
         end else begin
